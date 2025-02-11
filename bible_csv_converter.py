@@ -2,8 +2,8 @@ import os
 import pandas as pd
 
 # 변환된 엑셀 파일이 있는 폴더 경로
-input_folder = './converted_files/'  # 변환된 엑셀 파일이 저장된 폴더
-output_file = 'bible_end/bible_data.csv'  # 최종 저장될 CSV 파일 이름
+input_folder = './converted_files3/'  # 변환된 엑셀 파일이 저장된 폴더
+output_file = 'bible_end/bible_data3.csv'  # 최종 저장될 CSV 파일 이름
 
 # 파일명에서 숫자를 추출하는 함수
 def extract_number(filename):
