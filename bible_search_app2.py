@@ -7,7 +7,8 @@ from gensim.models import Word2Vec
 from scipy.io import mmread
 import pickle
 from PyQt5.QtCore import Qt
-from konlpy.tag import Okt  # 형태소 분석기
+from konlpy.tag import Okt
+import csv  # CSV 파일 사용
 
 form_window = uic.loadUiType('./bible_search_app.ui')[0]
 
@@ -21,7 +22,10 @@ class Exam(QWidget, form_window):
         self.embedding_model = Word2Vec.load('./models/word2vec_bible_data3.model')
 
         self.df_Content = pd.read_csv('./bible_end/bible_data3.csv')
-        self.okt = Okt()  # 형태소 분석기 초기화
+        self.okt = Okt()
+
+        # CSV 파일에서 감정 매핑 데이터를 불러오기
+        self.opposite_emotion_map = self.load_emotion_map('./word_data/opposite_emotion_map.csv')
 
         # 콤보박스 초기화
         self.Chapter = list(self.df_Content.Chapter)
@@ -36,6 +40,20 @@ class Exam(QWidget, form_window):
 
         # 레이블 설정
         self.lbl_recommendation.setWordWrap(True)
+
+    # CSV 파일에서 감정 매핑 데이터를 불러오기
+    def load_emotion_map(self, filename):
+        emotion_map = {}
+        try:
+            with open(filename, mode="r", encoding="utf-8") as file:
+                reader = csv.reader(file)
+                next(reader)  # 헤더 건너뛰기
+                for row in reader:
+                    if len(row) == 2:  # NegativeEmotion, PositiveEmotion 두 개의 열이 있는 경우
+                        emotion_map[row[0]] = row[1]
+        except FileNotFoundError:
+            print(f"CSV 파일 '{filename}'을(를) 찾을 수 없습니다.")
+        return emotion_map
 
     def btn_slot(self):
         user_input = self.le_keyword.text()
@@ -52,31 +70,9 @@ class Exam(QWidget, form_window):
     # 사용자가 입력한 고민을 분석하여 추천
     def recommendation_by_input(self, user_input):
         try:
-            # 부정적인 단어와 반대 의미 매핑 사전
-            opposite_emotion_map = {
-                "힘들어": "위로",
-                "너무 힘들어": "소망",
-                "슬퍼": "기쁨",
-                "외로워": "동행",
-                "절망": "희망",
-                "두려워": "평안",
-                "고통": "안식",
-                "혼란": "안정",
-                "불안": "믿음",
-                "포기": "용기",
-                "실패": "승리",
-                "어둠": "빛",
-                "낙담": "격려",
-                "좌절": "희망",
-                "병": "치유",
-                "괴로워": "평안",
-                "사는 게": "살아가는 기쁨",
-                "삶": "생명과 축복",
-            }
-
             # 입력 문장에서 부정적인 단어 감지
             detected_emotion = None
-            for negative, positive in opposite_emotion_map.items():
+            for negative, positive in self.opposite_emotion_map.items():
                 if negative in user_input:
                     detected_emotion = positive
                     break
@@ -98,7 +94,7 @@ class Exam(QWidget, form_window):
             # TF-IDF 기반 추천 생성
             recommendations = self.getRecommendation_with_content(cosine_sim_tfidf, top_n=3)
 
-            combined_recommendation = f"추천된 말씀 (반대 의미 기반):\n\n{recommendations}"
+            combined_recommendation = f"말씀 구절 :\n\n{recommendations}"
             return combined_recommendation
         except Exception as e:
             return '추천을 생성하는 중 오류가 발생했습니다.'
@@ -127,7 +123,6 @@ class Exam(QWidget, form_window):
         return '\n'.join(recommendations)
 
     def sort_bible_chapters(self, chapters):
-        # 성경 순서 정렬 정의
         bible_order = [
             "창세기", "출애굽기", "레위기", "민수기", "신명기", "여호수아", "사사기", "룻기", "사무엘상", "사무엘하",
             "열왕기상", "열왕기하", "역대상", "역대하", "에스라", "느헤미야", "에스더", "욥기", "시편", "잠언",
@@ -137,21 +132,18 @@ class Exam(QWidget, form_window):
             "골로새서", "데살로니가전서", "데살로니가후서", "디모데전서", "디모데후서", "디도서", "빌레몬서", "히브리서",
             "야고보서", "베드로전서", "베드로후서", "요한일서", "요한이서", "요한삼서", "유다서", "요한계시록"
         ]
-
-        # 성경 순서에 따라 정렬
         chapter_dict = {chapter: i for i, chapter in enumerate(bible_order)}
         return sorted(chapters, key=lambda x: chapter_dict.get(x, float('inf')))
 
 if __name__ == '__main__':
-
-    # 노트북 윈도우 배열 문제
-    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)     # PyQt가 Windows 배율 설정을 감지하고 조절하도록 함
-    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)        # 아이콘, 그래픽 요소가 흐려지는 문제 해결
+    QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+    QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
     app = QApplication(sys.argv)
     mainWindow = Exam()
     mainWindow.show()
     sys.exit(app.exec_())
+
 
 
 
