@@ -31,6 +31,7 @@ class Exam(QWidget, form_window):
 
         # 버튼 클릭 이벤트 연결
         self.btn_recommend.clicked.connect(self.btn_slot)
+        self.le_keyword.returnPressed.connect(self.btn_slot)
         self.cb_title.currentIndexChanged.connect(self.combobox_slot)
 
         # 레이블 설정
